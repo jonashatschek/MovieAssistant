@@ -17,6 +17,7 @@ namespace WindowsFormsApplication4
             HttpWebRequest request = (HttpWebRequest) WebRequest.Create(url+endPoint);
 
             request.Method = httpMethod.ToString();
+            request.Timeout = -1;
 
             using (HttpWebResponse response = (HttpWebResponse) request.GetResponse())
             {

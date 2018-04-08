@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
 using Newtonsoft.Json;
 
 namespace WindowsFormsApplication4
 {
+
+    //TODO: Add To download and To watch lists! Make ability to save using XML
+
     public enum httpVerb
     {
         GET,
@@ -24,6 +28,7 @@ namespace WindowsFormsApplication4
         private static string searchString;
         //private const string url = "http://www.omdbapi.com/";
         List<string> listOfFormats = new List<string>();
+        List<string> watchList = new List<string>();
 
         public Form1()
         {
@@ -35,7 +40,7 @@ namespace WindowsFormsApplication4
         {
 
             string[] linesInFormatsFile =
-                System.IO.File.ReadAllLines(
+                File.ReadAllLines(
                     @"C:\Users\Jonas\Documents\Visual Studio 2015\Projects\WindowsFormsApplication4\WindowsFormsApplication4\bin\listOfFormats.txt");
 
             foreach (string line in linesInFormatsFile)
@@ -45,13 +50,13 @@ namespace WindowsFormsApplication4
             }
 
             DirectoryInfo d = new DirectoryInfo(@"X:\Filmer");
-            
+
             FileInfo[] files = d.GetFiles();
             DirectoryInfo[] subdirectories = d.GetDirectories();
 
             foreach (FileInfo file in files)
             {
-                string fileName = cleanInput(file.Name); 
+                string fileName = cleanInput(file.Name);
                 listOfMovies.Add(RemoveMovieFormatsFromInput(fileName));
             }
 
@@ -66,50 +71,6 @@ namespace WindowsFormsApplication4
 
         }
 
-        /*
-        static async Task RunAsync()
-        {
-            Movie movie = new Movie();
-
-            client.BaseAddress = new Uri(url);
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(
-                new MediaTypeWithQualityHeaderValue("application/json"));
-
-            movie = await GetMovieAsync(searchString);
-
-            //Console.WriteLine(returnMovie);
-
-            //var test = returnMovie;
-
-        }
-
-        static async Task<Movie> GetMovieAsync(string path)
-        {
-            Movie movie = null;
-            HttpResponseMessage response = await client.GetAsync(path);
-            //var response = client.GetAsync(path).Result;
-            //var movieObject = "";
-            //string res = "";
-
-            //using (HttpContent content = response.Content)
-            //{
-            //    Task<string> result = content.ReadAsStringAsync();
-            //    res = result.Result;
-            //    JObject test;
-            //    //var movieObject = JObject.Parse(test);
-            //}
-            if (response.IsSuccessStatusCode)
-            {
-                movie = await response.Content.ReadAsAsync<Movie>();
-            }
-
-            return movie;
-            //return res;
-        }
-            */
-
-
         #region cleaners and debug
 
         /// <summary>
@@ -117,19 +78,30 @@ namespace WindowsFormsApplication4
         /// </summary>
         /// <param name="searchQuery"></param>
         /// <returns>query and path part of search string</returns>
-        private string QueryAndPath(string searchQuery)
+        private string QueryAndPath(string searchQuery, string searchType)
         {
 
             searchQuery = searchQuery.Replace(" ", "+");
-            searchQuery = "t=" + searchQuery;
+
+            if (searchType == "title")
+            {
+                searchQuery = "t=" + searchQuery;
+            }
+            else if (searchType == "imdbId")
+            {
+                searchQuery = "i=" + searchQuery;
+            }
+
             return apiKey + searchQuery;
 
         }
 
         private string cleanInput(string input)
         {
+
             input = input.ToLower();
             input = input.Replace('.', ' ');
+            input = input.Replace('_', ' ');
             input = input.Trim();
             //input = RemoveMovieFormatsFromInput(input);
 
@@ -138,37 +110,52 @@ namespace WindowsFormsApplication4
 
         private string RemoveMovieFormatsFromInput(string input)
         {
-            foreach (string format in listOfFormats)
+
+            foreach (string movieFormat in listOfFormats)
             {
-                if (input.Contains(format))
+
+                if (input.Contains(movieFormat))
                 {
-                    int first = input.IndexOf(format);
-                    int last = input.LastIndexOf(format) + format.Length;
+
+                    int first = input.IndexOf(movieFormat);
+                    int last = input.LastIndexOf(movieFormat) + movieFormat.Length;
 
                     //string test = input.Substring(first, last - first);
-                    input = input.Replace(input.Substring(first, last - first), "");
-                    input = input.Trim();
+                    try
+                    {
+
+                        if (!Char.IsLetter(input[first - 1]))
+                        {
+
+                            input = input.Replace(input.Substring(first, last - first), "");
+                            input = input.Trim();
+                        }
+                    }
+                    catch (IndexOutOfRangeException)
+                    {
+
+                        input = input.Replace(input.Substring(first, last - first), "");
+                        input = input.Trim();
+                    }
                 }
             }
 
             return input;
         }
 
-/*        private void debugOutput(string strDebuxText)
+        private void MovieNotFound()
         {
-            try
-            {
-                System.Diagnostics.Debug.Write(strDebuxText + Environment.NewLine);
-                resultsListbox.Text = resultsListbox.Text + strDebuxText + Environment.NewLine;
-                resultsListbox.sele = response_textBox.TextLength;
-                response_textBox.ScrollToCaret();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.Write(ex.Message);
-            }
-        }*/
 
+            movieTitleDisplay_textbox.Text = "Movie not found :(";
+            yearDisplay_textbox.Text = "-";
+            runtimeDisplay_textbox.Text = "-";
+            plotDisplay_textbox.Text = "-";
+            imdbRating_textbox.Text = "IMDb rating: " + "-";
+            boxOfficeDisplay_textbox.Text = "Box office: " + "-";
+            moviePosterDisplay_picturebox.SizeMode = PictureBoxSizeMode.StretchImage;
+            genreDisplay_textbox.Text = "Genre: " + "-";
+            moviePosterDisplay_picturebox.Load("https://i.imgur.com/PBOJR40.jpg");
+        }
 
         #endregion
 
@@ -182,52 +169,119 @@ namespace WindowsFormsApplication4
 
             foreach (string movie in listOfMovies.FindAll(m => m.Contains((sender as TextBox).Text)))
             {
+
                 resultsListbox.Items.Add(movie);
             }
-            
             //= listOfMovies.Where(m => m.Contains(sender.ToString()));
+        }
+
+        private string SearchStringToClient(string searchString)
+        {
+            RestClient rClient = new RestClient();
+            rClient.endPoint = searchString;
+            string jSonString = rClient.makeRequest();
+
+            return jSonString;
         }
 
         private void searchOmdbBtn_Click(object sender, EventArgs e)
         {
             //TODO: create try-catch for when there's no internet connection
-            //string selectedListboxItem = resultsListbox.SelectedItem.ToString();
-            searchString = QueryAndPath(resultsListbox.SelectedItem.ToString());
-            //searchString = QueryAndPath(selectedListboxItem);
+            string jSonString = "";
 
-            RestClient rClient = new RestClient();
-            rClient.endPoint = searchString;
-            string jSonString = rClient.makeRequest();
-
-            Movie m = JsonConvert.DeserializeObject<Movie>(jSonString);
-
-            if (m.Response != "False")
+            if (searchOnTextboxInput_radioButton.Checked)
             {
-                movieTitleDisplay_textbox.Text = m.Title;
-                yearDisplay_textbox.Text = m.Year;
-                runtimeDisplay_textbox.Text = m.Runtime;
-                plotDisplay_textbox.Text = m.Plot;
-                imdbRating_textbox.Text = "IMDb rating: " + m.imdbRating;
-                boxOfficeDisplay_textbox.Text = "Box office: " + m.BoxOffice;
-                moviePosterDisplay_picturebox.SizeMode = PictureBoxSizeMode.StretchImage;
-                genreDisplay_textbox.Text = "Genre: " + m.Genre;
+                //searchString = QueryAndPath(searchTxtbox.Text);
+                jSonString = SearchStringToClient(QueryAndPath(searchTxtbox.Text, "title"));
+            }
+            else
+            {
 
                 try
                 {
-                    moviePosterDisplay_picturebox.Load(m.Poster);
+
+                    jSonString = SearchStringToClient(QueryAndPath(resultsListbox.SelectedItem.ToString(), "title"));
                 }
-                catch
+                catch (NullReferenceException)
                 {
-                    moviePosterDisplay_picturebox.Load("https://i.imgur.com/PBOJR40.jpg");
+
+                    MessageBox.Show("Select a movie in the list");
                 }
 
             }
-            else
-                movieTitleDisplay_textbox.Text = "Movie not found :(";
+
+            Movie movieData = JsonConvert.DeserializeObject<Movie>(jSonString);
+
+            try
+            {
+                if (movieData.Response != "False")
+                {
+
+                    movieTitleDisplay_textbox.Text = movieData.Title;
+                    yearDisplay_textbox.Text = movieData.Year;
+                    runtimeDisplay_textbox.Text = movieData.Runtime;
+                    plotDisplay_textbox.Text = movieData.Plot;
+                    imdbRating_textbox.Text = @"IMDb rating: " + movieData.imdbRating;
+                    boxOfficeDisplay_textbox.Text = "Box office: " + movieData.BoxOffice;
+                    moviePosterDisplay_picturebox.SizeMode = PictureBoxSizeMode.StretchImage;
+                    genreDisplay_textbox.Text = "Genre: " + movieData.Genre;
+                    moviePosterDisplay_picturebox.Load(movieData.Poster);
+                    imdbIdDisplay_textbox.Text = movieData.imdbID;
+                }
+
+            }
+            catch
+            {
+                MovieNotFound();
+            }
 
         }
 
         #endregion
+
+        private void saveToWatchlist_button_Click(object sender, EventArgs e)
+        {
+            //string returnJsonString = "";
+
+            //if (movieTitleDisplay_textbox.Text != "Movie not found :(")
+            //{
+            //    returnJsonString = SearchStringToClient(QueryAndPath(movieTitleDisplay_textbox.Text));
+            //}
+
+            //Movie m = new Movie();
+
+            string jsonString = "";
+
+            jsonString = SearchStringToClient(QueryAndPath(imdbIdDisplay_textbox.Text, "imdbId"));
+
+            Movie m = JsonConvert.DeserializeObject<Movie>(jsonString);
+
+            //try
+            //{
+                if (m.Response != "False")
+                {
+
+                    //jsonString = JsonConvert.SerializeObject(jsonString.ToArray());
+                    //System.IO.File.WriteAllText(@"C:\Users\Jonas\Documents\Visual Studio 2015\Projects\WindowsFormsApplication4\WindowsFormsApplication4\bin\watchList.json", jsonString);
+
+                    using (FileStream fs = File.Open(Path.GetFullPath(@"C:\Users\Jonas\Documents\Visual Studio 2015\Projects\WindowsFormsApplication4\WindowsFormsApplication4\bin\watchList.json"), FileMode.CreateNew))
+                    using (StreamWriter sw = new StreamWriter(fs))
+                    using (JsonWriter jw = new JsonTextWriter(sw))
+                    {
+                        jw.Formatting = Formatting.Indented;
+
+                        JsonSerializer serializer = new JsonSerializer();
+                        serializer.Serialize(jw, m);
+                    }
+
+                }
+            //}
+            //catch
+            //{
+            //    MovieNotFound();
+            //}
+
+        }
     }
 
 }
