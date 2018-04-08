@@ -30,6 +30,7 @@ namespace WindowsFormsApplication4
         List<string> listOfFormats = new List<string>();
         List<string> watchList = new List<string>();
 
+
         public Form1()
         {
             InitializeComponent();
@@ -241,6 +242,9 @@ namespace WindowsFormsApplication4
 
         private void saveToWatchlist_button_Click(object sender, EventArgs e)
         {
+
+            List<Movie> savedWatchListItems = new List<Movie>();
+
             //string returnJsonString = "";
 
             //if (movieTitleDisplay_textbox.Text != "Movie not found :(")
@@ -258,30 +262,47 @@ namespace WindowsFormsApplication4
 
             //try
             //{
-                if (m.Response != "False")
-                {
+            //if(File.Exists(@"C:\Users\Jonas\Documents\Visual Studio 2015\Projects\WindowsFormsApplication4\WindowsFormsApplication4\bin\watchList.json"))
 
-                    //jsonString = JsonConvert.SerializeObject(jsonString.ToArray());
-                    //System.IO.File.WriteAllText(@"C:\Users\Jonas\Documents\Visual Studio 2015\Projects\WindowsFormsApplication4\WindowsFormsApplication4\bin\watchList.json", jsonString);
+            using (StreamReader r = new StreamReader(@"C:\Users\Jonas\Documents\Visual Studio 2015\Projects\WindowsFormsApplication4\WindowsFormsApplication4\bin\watchList.json"))
+            {
+                dynamic savedJson = r.ReadToEnd();
 
-                    using (FileStream fs = File.Open(Path.GetFullPath(@"C:\Users\Jonas\Documents\Visual Studio 2015\Projects\WindowsFormsApplication4\WindowsFormsApplication4\bin\watchList.json"), FileMode.CreateNew))
-                    using (StreamWriter sw = new StreamWriter(fs))
-                    using (JsonWriter jw = new JsonTextWriter(sw))
-                    {
-                        jw.Formatting = Formatting.Indented;
+                //TODO: find a way to deserialize correcly
+                savedWatchListItems.Add(JsonConvert.DeserializeObject<Movie>(savedJson));
 
-                        JsonSerializer serializer = new JsonSerializer();
-                        serializer.Serialize(jw, m);
-                    }
+                r.Close();
 
-                }
+                File.Delete(@"C:\Users\Jonas\Documents\Visual Studio 2015\Projects\WindowsFormsApplication4\WindowsFormsApplication4\bin\watchList.json");
+            }
+
+            if (m.Response != "False")
+            {
+
+                jsonString = JsonConvert.SerializeObject(jsonString.ToArray());
+                File.WriteAllText(
+                    @"C:\Users\Jonas\Documents\Visual Studio 2015\Projects\WindowsFormsApplication4\WindowsFormsApplication4\bin\watchList.json",
+                    jsonString);
+
+
+
+                //using (FileStream fs = File.Open(@"C:\Users\Jonas\Documents\Visual Studio 2015\Projects\WindowsFormsApplication4\WindowsFormsApplication4\bin\watchList.json", FileMode.CreateNew))
+                //using (StreamWriter sw = new StreamWriter(fs))
+                //using (JsonWriter jw = new JsonTextWriter(sw))
+                //{
+                //    jw.Formatting = Formatting.Indented;
+
+                //    savedWatchListItems.Add(m);
+                //    JsonSerializer serializer = new JsonSerializer();
+                //    serializer.Serialize(jw, savedWatchListItems);
+                //}
+            }
+        }
             //}
             //catch
             //{
             //    MovieNotFound();
             //}
-
-        }
     }
 
 }
